@@ -1,5 +1,17 @@
-.env
+# Python
 __pycache__/
 *.pyc
-data/raw/
-data/processed/
+
+# Environment
+.env
+
+# Data files (VERY IMPORTANT)
+data/
+*.bin
+*.pkl
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
