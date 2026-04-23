@@ -31,5 +31,5 @@ Rules: Use only the text below. No external knowledge. Simple language.
 PAPER:
 {trimmed}
 """
-        text = generate(prompt, temperature=0.2)
+        text = generate(prompt, temperature=0.2, agent=self.name)
         return SummarizerResult(text=text)

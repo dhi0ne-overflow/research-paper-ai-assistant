@@ -26,5 +26,5 @@ Format with clear headings. If the excerpt is too short to assess gaps, say so e
 PAPER:
 {trimmed}
 """
-        text = generate(prompt, temperature=0.25)
+        text = generate(prompt, temperature=0.25, agent=self.name)
         return GapAnalysisResult(text=text)

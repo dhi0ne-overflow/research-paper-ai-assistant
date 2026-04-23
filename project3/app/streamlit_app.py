@@ -72,6 +72,8 @@ if "last_report" in st.session_state:
 
     with tab_sum:
         s = by_name.get("paper_summarizer")
+        if s and s.model_used:
+            st.caption(f"Model: `{s.model_used}`")
         if s and s.ok and s.output:
             st.markdown(s.output.text)
         elif s and not s.ok:
@@ -81,6 +83,8 @@ if "last_report" in st.session_state:
 
     with tab_cit:
         c = by_name.get("citation_extractor")
+        if c and c.model_used:
+            st.caption(f"Model: `{c.model_used}`")
         if c and c.ok and c.output:
             st.markdown(c.output.raw_markdown)
             if c.output.items:
@@ -92,6 +96,8 @@ if "last_report" in st.session_state:
 
     with tab_gap:
         g = by_name.get("research_gap_finder")
+        if g and g.model_used:
+            st.caption(f"Model: `{g.model_used}`")
         if g and g.ok and g.output:
             st.markdown(g.output.text)
         elif g and not g.ok:

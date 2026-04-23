@@ -58,7 +58,7 @@ Max 40 items, prioritize distinct works. If the excerpt has a references section
 PAPER:
 {trimmed}
 """
-        raw = generate(prompt, temperature=0.0)
+        raw = generate(prompt, temperature=0.0, agent=self.name)
         items: List[CitationItem] = []
         try:
             for obj in _parse_json_list(raw)[:40]:
