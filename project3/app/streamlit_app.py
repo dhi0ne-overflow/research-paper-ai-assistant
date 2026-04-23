@@ -6,27 +6,29 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 import streamlit as st
 
+from src.llm import active_llm_label
 from src.orchestrator import run_research_assistant
 from src.pdf_processor import extract_text_from_pdf
 
 st.set_page_config(
-    page_title="Research Assistant — Multi-Agent",
+    page_title="Multi-Agent Research Assistant",
     page_icon="🧩",
     layout="wide",
 )
 
-st.title("Research Assistant — agentic / multi-agent")
+st.title("Multi-Agent Research Assistant")
 st.caption("Paper Summarizer · Citation Extractor · Research Gap Finder (parallel)")
 
 with st.expander("How it works", expanded=False):
     st.markdown(
-        """
+        f"""
         Three **specialist agents** share the same paper text, orchestrated in **parallel**:
         - **Paper summarizer** — structured summary and contributions
         - **Citation extractor** — in-text and bibliography-style references
         - **Research gap finder** — limitations, open questions, conservative inferred gaps
-        Set `GEMINI_API_KEY` in `.env` (and optionally `GEMINI_MODEL`). Uses
-        `gemini-flash-latest` by default, consistent with other projects in this repo.
+        Configure **`project3/.env`**: set `GROQ_API_KEY` (default provider when present)
+        or `GEMINI_API_KEY`, or set `LLM_PROVIDER` to `groq` or `gemini`. See `README.md`
+        in this folder. Current backend: **{active_llm_label()}**.
         """
     )
 
