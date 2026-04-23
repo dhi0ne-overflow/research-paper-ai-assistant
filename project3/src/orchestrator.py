@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from src.agents import CitationExtractorAgent, PaperSummarizerAgent, ResearchGapFinderAgent
-from src.llm import LlmError
+from src.llm import LlmError, agent_llm_label
 
 
 @dataclass
@@ -14,6 +14,7 @@ class AgentRunRecord:
     ok: bool
     output: Any = None
     error: Optional[str] = None
+    model_used: Optional[str] = None
 
     def _serialize_output(self) -> Any:
         return _output_to_serializable(self.output)
@@ -34,6 +35,7 @@ class ResearchAssistantReport:
                     "agent": r.agent,
                     "ok": r.ok,
                     "error": r.error,
+                    "model_used": r.model_used,
                     "output": r._serialize_output(),
                 }
                 for r in self.runs
@@ -64,13 +66,14 @@ def _output_to_serializable(obj: Any) -> Any:
 
 
 def _safe_call(name: str, fn, *args, **kwargs) -> AgentRunRecord:
+    model_used = agent_llm_label(name)
     try:
         out = fn(*args, **kwargs)
-        return AgentRunRecord(agent=name, ok=True, output=out)
+        return AgentRunRecord(agent=name, ok=True, output=out, model_used=model_used)
     except LlmError as e:
-        return AgentRunRecord(agent=name, ok=False, error=str(e))
+        return AgentRunRecord(agent=name, ok=False, error=str(e), model_used=model_used)
     except Exception as e:  # noqa: BLE001
-        return AgentRunRecord(agent=name, ok=False, error=str(e))
+        return AgentRunRecord(agent=name, ok=False, error=str(e), model_used=model_used)
 
 
 def run_research_assistant(

@@ -35,6 +35,49 @@ def _provider() -> str:
 GEMINI_DEFAULT_MODEL = "gemini-flash-latest"
 GROQ_DEFAULT_MODEL = "llama-3.3-70b-versatile"
 
+# Agent names must match agent classes (used for per-agent model env vars).
+_GROQ_MODEL_ENV_BY_AGENT: dict[str, str] = {
+    "paper_summarizer": "GROQ_MODEL_SUMMARIZER",
+    "citation_extractor": "GROQ_MODEL_CITATIONS",
+    "research_gap_finder": "GROQ_MODEL_GAPS",
+}
+_GEMINI_MODEL_ENV_BY_AGENT: dict[str, str] = {
+    "paper_summarizer": "GEMINI_MODEL_SUMMARIZER",
+    "citation_extractor": "GEMINI_MODEL_CITATIONS",
+    "research_gap_finder": "GEMINI_MODEL_GAPS",
+}
+
+
+def resolve_groq_model(agent: str | None) -> str:
+    """Model id for Groq chat completions; falls back to GROQ_MODEL then default."""
+    if agent:
+        env_name = _GROQ_MODEL_ENV_BY_AGENT.get(agent)
+        if env_name:
+            v = (os.getenv(env_name) or "").strip()
+            if v:
+                return v
+    return (os.getenv("GROQ_MODEL") or "").strip() or GROQ_DEFAULT_MODEL
+
+
+def resolve_gemini_model(agent: str | None) -> str:
+    if agent:
+        env_name = _GEMINI_MODEL_ENV_BY_AGENT.get(agent)
+        if env_name:
+            v = (os.getenv(env_name) or "").strip()
+            if v:
+                return v
+    return (os.getenv("GEMINI_MODEL") or "").strip() or GEMINI_DEFAULT_MODEL
+
+
+def agent_llm_label(agent: str | None) -> str:
+    """Non-secret label: provider + resolved model for this agent."""
+    p = _provider()
+    if p == "none":
+        return "not configured"
+    if p == "groq":
+        return f"groq:{resolve_groq_model(agent)}"
+    return f"gemini:{resolve_gemini_model(agent)}"
+
 
 def _groq_client() -> Groq:
     key = os.getenv("GROQ_API_KEY")
@@ -45,8 +88,7 @@ def _groq_client() -> Groq:
     return Groq(api_key=key)
 
 
-def _generate_groq(prompt: str, *, temperature: float) -> str:
-    model = os.getenv("GROQ_MODEL", GROQ_DEFAULT_MODEL)
+def _generate_groq(prompt: str, *, temperature: float, model: str) -> str:
     client = _groq_client()
     try:
         res = client.chat.completions.create(
@@ -65,14 +107,13 @@ def _generate_groq(prompt: str, *, temperature: float) -> str:
         raise LlmError(f"Groq error: {e}") from e
 
 
-def _generate_gemini(prompt: str, *, temperature: float) -> str:
+def _generate_gemini(prompt: str, *, temperature: float, model_name: str) -> str:
     key = os.getenv("GEMINI_API_KEY")
     if not key:
         raise LlmError(
             "GEMINI_API_KEY is not set. Add it to project3/.env or switch LLM_PROVIDER=groq with GROQ_API_KEY.",
         )
     genai.configure(api_key=key)
-    model_name = os.getenv("GEMINI_MODEL", GEMINI_DEFAULT_MODEL)
     model = genai.GenerativeModel(model_name)
     try:
         res = model.generate_content(
@@ -89,7 +130,11 @@ def _generate_gemini(prompt: str, *, temperature: float) -> str:
         raise LlmError(f"Model error: {msg}") from e
 
 
-def generate(prompt: str, *, temperature: float = 0.2) -> str:
+def generate(prompt: str, *, temperature: float = 0.2, agent: str | None = None) -> str:
+    """
+    Run the configured LLM. When ``agent`` is set (e.g. ``paper_summarizer``),
+    per-agent model env vars are used for Groq / Gemini (see README).
+    """
     provider = _provider()
     if provider == "none":
         raise LlmError(
@@ -97,15 +142,17 @@ def generate(prompt: str, *, temperature: float = 0.2) -> str:
             "(see README.md), or set LLM_PROVIDER with the matching key.",
         )
     if provider == "groq":
-        return _generate_groq(prompt, temperature=temperature)
-    return _generate_gemini(prompt, temperature=temperature)
+        model = resolve_groq_model(agent)
+        return _generate_groq(prompt, temperature=temperature, model=model)
+    model_name = resolve_gemini_model(agent)
+    return _generate_gemini(prompt, temperature=temperature, model_name=model_name)
 
 
 def active_llm_label() -> str:
-    """Short label for UI / debugging (no secrets)."""
+    """Short label for UI when a single default is shown (no agent context)."""
     p = _provider()
     if p == "none":
         return "not configured (set GROQ_API_KEY or GEMINI_API_KEY)"
     if p == "groq":
-        return f"groq:{os.getenv('GROQ_MODEL', GROQ_DEFAULT_MODEL)}"
-    return f"gemini:{os.getenv('GEMINI_MODEL', GEMINI_DEFAULT_MODEL)}"
+        return f"groq:{resolve_groq_model(None)} (per-agent: GROQ_MODEL_SUMMARIZER / _CITATIONS / _GAPS)"
+    return f"gemini:{resolve_gemini_model(None)} (per-agent: GEMINI_MODEL_SUMMARIZER / _CITATIONS / _GAPS)"
